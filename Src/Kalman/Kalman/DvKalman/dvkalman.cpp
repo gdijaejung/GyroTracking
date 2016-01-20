@@ -13,7 +13,36 @@ Vector3 GetPos();
 
 void main()
 {
+	const float dt = 0.1f;
+	const int Nsamples = 100;
+	Vector3 Xsaved[Nsamples];
+	float Zsaved[Nsamples];
 
+	for (int i = 0; i < Nsamples; ++i)
+	{
+		const Vector3 z = GetPos();
+		Vector3 v = DvKalman(z);
+
+		Xsaved[i] = v;
+		Zsaved[i] = z.x;
+	}
+
+	network::cUDPClient udpClient;
+	if (udpClient.Init("127.0.0.1", 8888, 10))
+	{
+		udpClient.SendData("@start", 6);
+		Sleep(33);
+
+		for (int i = 0; i < Nsamples; ++i)
+		{
+			char buff[64];
+			sprintf_s(buff, "%f, %f, %f", Xsaved[i].x, Xsaved[i].y, Zsaved[i]);
+			udpClient.SendData(buff, sizeof(buff));
+			Sleep(33);
+		}
+		udpClient.SendData("@stop", 6);
+		Sleep(33);
+	}
 }
 
 
@@ -68,10 +97,10 @@ Vector3 DvKalman(const Vector3 z)
 		Q.SetIdentity();
 		Q._22 = 3;
 		
-		R.SetScale(Vector3(10, 1, 1));
+		R.SetScale(Vector3(10, 0, 0));
 
 		x = Vector3(0, 20, 0);
-		P.SetScale(Vector3(5, 5, 5));
+		P.SetScale(Vector3(5, 5, 0));
 	}
 
 	Vector3 xp = x * A;
